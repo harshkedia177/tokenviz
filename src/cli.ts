@@ -7,6 +7,23 @@ import { copyImageToClipboard } from './clipboard.js';
 import { getAllThemeNames, getBgColor } from './themes.js';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
+import { createInterface } from 'readline';
+
+function getTimestamp(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+}
+
+async function confirmSave(filePath: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((res) => {
+    rl.question(`Save to ${filePath}? (y/n) `, (answer) => {
+      rl.close();
+      res(answer.trim().toLowerCase() === 'y' || answer.trim().toLowerCase() === 'yes');
+    });
+  });
+}
 
 interface CLIOptions {
   claude?: boolean;
@@ -98,13 +115,25 @@ program
 
       if (format) {
         const svg = renderSVG(panels, renderOpts);
+        const ts = getTimestamp();
+        let savedPermission = false;
 
         if (format === 'svg') {
-          const outPath = opts.out || 'braggrid.svg';
+          const outPath = opts.out || `braggrid_${ts}.svg`;
+          if (!savedPermission) {
+            const ok = await confirmSave(resolve(outPath));
+            if (!ok) { console.log('Skipped saving.'); return; }
+            savedPermission = true;
+          }
           writeFileSync(outPath, svg);
           console.log(`\nSaved to ${resolve(outPath)}`);
         } else {
-          const outPath = opts.out || 'braggrid.png';
+          const outPath = opts.out || `braggrid_${ts}.png`;
+          if (!savedPermission) {
+            const ok = await confirmSave(resolve(outPath));
+            if (!ok) { console.log('Skipped saving.'); return; }
+            savedPermission = true;
+          }
           await svgToPng(svg, outPath, { background: getBgColor(opts.theme) });
           console.log(`\nSaved to ${resolve(outPath)}`);
 

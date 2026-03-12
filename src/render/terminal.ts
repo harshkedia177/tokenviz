@@ -1,8 +1,18 @@
 import chalk from 'chalk';
-import { getTheme } from '../themes.js';
+import { getTheme, isDark } from '../themes.js';
 import { formatTokens } from '../stats.js';
 import { MONTH_NAMES, DAY_LABELS, TOOL_COLORS, buildGrid, extractDisplayStats } from './shared.js';
 import type { ToolPanel, Theme, RenderOptions } from '../types.js';
+
+function termText(theme: Theme, themeName: string) {
+  if (isDark(themeName)) return chalk.hex(theme.text);
+  return chalk.white;
+}
+
+function termLabel(theme: Theme, themeName: string) {
+  if (isDark(themeName)) return chalk.hex(theme.label);
+  return chalk.gray;
+}
 
 function getCellColor(tokens: number, maxTokens: number, theme: Theme): string {
   if (!tokens || tokens <= 0) return theme.empty;
@@ -18,13 +28,16 @@ const TERMINAL_DAY_LABELS: string[] = DAY_LABELS.map(l => l || '   ');
 const BLOCK = '\u2588\u2588';
 
 export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): void {
-  const theme = getTheme(opts.theme ?? 'green');
+  const themeName = opts.theme ?? 'green';
+  const theme = getTheme(themeName);
+  const txt = termText(theme, themeName);
+  const lbl = termLabel(theme, themeName);
   const lines: string[] = [];
   const isMultiTool = panels.length > 1;
 
-  lines.push(chalk.hex(theme.text).bold(' braggrid'));
+  lines.push(txt.bold(' braggrid'));
   if (opts.user) {
-    lines.push(chalk.hex(theme.label)(` @${opts.user}`));
+    lines.push(lbl(` @${opts.user}`));
   }
   lines.push('');
 
@@ -37,9 +50,9 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
 
     if (isMultiTool) {
       lines.push(chalk.hex(toolColor).bold(` \u25CF ${tool.toUpperCase()}`) +
-        chalk.hex(theme.label).dim(`  ${ds.inputTotal} in / ${ds.outputTotal} out`));
+        lbl(`  ${ds.inputTotal} in / ${ds.outputTotal} out`));
     } else {
-      lines.push(chalk.hex(theme.label).dim(` ${ds.inputTotal} in / ${ds.outputTotal} out / ${ds.grandTotal} total`));
+      lines.push(lbl(` ${ds.inputTotal} in / ${ds.outputTotal} out / ${ds.grandTotal} total`));
     }
     lines.push('');
 
@@ -63,11 +76,11 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
           }
         }
       }
-      lines.push(chalk.hex(theme.label)(monthLine));
+      lines.push(lbl(monthLine));
     }
 
     for (let row = 0; row < 7; row++) {
-      let line = chalk.hex(theme.label)(TERMINAL_DAY_LABELS[row] + ' ');
+      let line = lbl(TERMINAL_DAY_LABELS[row] + ' ');
       for (let w = 0; w < grid[row].length; w++) {
         const cell = grid[row][w];
         const color = getCellColor(cell.tokens, maxTokens, theme);
@@ -77,23 +90,23 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
     }
     lines.push('');
 
-    let legend = '     ' + chalk.hex(theme.label)('LESS ');
+    let legend = '     ' + lbl('LESS ');
     legend += chalk.hex(theme.empty)(BLOCK);
     for (const c of theme.scale) {
       legend += chalk.hex(c)(BLOCK);
     }
-    legend += chalk.hex(theme.label)(' MORE');
+    legend += lbl(' MORE');
     lines.push(legend);
     lines.push('');
 
     const gridCharWidth = 5 + numWeeks * 2;
-    lines.push(chalk.hex(theme.label).dim(' ' + '\u2500'.repeat(Math.min(gridCharWidth, 100))));
+    lines.push(lbl.dim(' ' + '\u2500'.repeat(Math.min(gridCharWidth, 100))));
     lines.push('');
 
     const COL = 26;
-    const statLabel = (s: string): string => chalk.hex(theme.label)(s.padEnd(COL));
-    const statValue = (s: string): string => chalk.hex(theme.text).bold(String(s).padEnd(COL));
-    const statSub = (s: string): string => chalk.hex(theme.label)(s.padEnd(COL));
+    const statLabel = (s: string): string => lbl(s.padEnd(COL));
+    const statValue = (s: string): string => txt.bold(String(s).padEnd(COL));
+    const statSub = (s: string): string => lbl(s.padEnd(COL));
 
     lines.push(
       ' ' +

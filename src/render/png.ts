@@ -1,25 +1,20 @@
-import sharp from 'sharp';
+import { Resvg } from '@resvg/resvg-js';
 import { writeFileSync } from 'fs';
-
-const PNG_SCALE = 4;
 
 interface SvgToPngOptions {
   background?: string;
 }
 
 export async function svgToPng(svgString: string, outputPath?: string, opts: SvgToPngOptions = {}): Promise<Buffer> {
-  const wMatch = svgString.match(/width="(\d+)"/);
-  const targetWidth = wMatch
-    ? parseInt(wMatch[1], 10) * PNG_SCALE
-    : 4000;
-
   const bg = opts.background || '#1a1a2e';
 
-  const pngBuffer = await sharp(Buffer.from(svgString), { density: 192 })
-    .resize({ width: targetWidth })
-    .flatten({ background: bg })
-    .png()
-    .toBuffer();
+  const resvg = new Resvg(svgString, {
+    background: bg,
+    fitTo: { mode: 'width', value: 4000 },
+  });
+
+  const rendered = resvg.render();
+  const pngBuffer = Buffer.from(rendered.asPng());
 
   if (outputPath) writeFileSync(outputPath, pngBuffer);
   return pngBuffer;

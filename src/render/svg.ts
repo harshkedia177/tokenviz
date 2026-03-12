@@ -210,6 +210,12 @@ export function renderSVG(panels: ToolPanel[], opts: RenderOptions = {}): string
   }
 
   y += BOTTOM_PAD;
+
+  const now = new Date();
+  const generatedAt = `Generated at ${now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })}`;
+  parts.push(`<text x="${MARGIN.left + gridWidth}" y="${y}" class="label" text-anchor="end" dominant-baseline="auto" opacity="0.5">${escapeXml(generatedAt)}</text>`);
+  y += 14;
+
   const totalHeight = y;
 
   const header = `<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}">`;
