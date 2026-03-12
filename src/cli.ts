@@ -26,7 +26,7 @@ interface CLIOptions {
 program
   .name('braggrid')
   .description('Shareable heatmap of your AI coding tool usage')
-  .version('0.1.0')
+  .version('0.1.1')
   .option('--claude', 'Include Claude Code data')
   .option('--codex', 'Include Codex data')
   .option('--opencode', 'Include OpenCode data')

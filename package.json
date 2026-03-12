@@ -1,6 +1,6 @@
 {
   "name": "braggrid",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GitHub-style contribution heatmap for your AI coding tool usage. Supports Claude Code, Codex, OpenCode & Cursor.",
   "type": "module",
   "bin": {
@@ -51,12 +51,12 @@
     "chalk": "^5.4.0",
     "clipboardy": "^4.0.0",
     "commander": "^13.0.0",
-    "better-sqlite3": "^11.0.0",
-    "sharp": "^0.33.0"
+    "sharp": "^0.33.0",
+    "sql.js": "^1.14.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@types/better-sqlite3": "^7.6.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "@types/sql.js": "^1.4.9",
+    "typescript": "^5.7.0"
   }
 }

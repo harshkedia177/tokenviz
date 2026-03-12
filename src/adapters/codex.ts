@@ -134,15 +134,27 @@ function parseTimestamp(value: string | number | null): Date | null {
   return null;
 }
 
-function loadThreadRows(conn: ReturnType<typeof openDb>): ThreadRow[] {
+function execToRows(db: Awaited<ReturnType<typeof openDb>>, sql: string): ThreadRow[] {
+  const result = db.exec(sql);
+  if (!result.length) return [];
+  const cols = result[0].columns;
+  return result[0].values.map(row => {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < cols.length; i++) obj[cols[i]] = row[i];
+    return obj as unknown as ThreadRow;
+  });
+}
+
+async function loadThreadRows(dbPath: string): Promise<ThreadRow[]> {
+  const db = await openDb(dbPath);
   try {
-    return conn.prepare(
-      'SELECT created_at, updated_at, tokens_used FROM threads',
-    ).all() as ThreadRow[];
-  } catch {
-    return conn.prepare(
-      'SELECT created_at, last_active_at AS updated_at, tokens_used FROM threads',
-    ).all() as ThreadRow[];
+    try {
+      return execToRows(db, 'SELECT created_at, updated_at, tokens_used FROM threads');
+    } catch {
+      return execToRows(db, 'SELECT created_at, last_active_at AS updated_at, tokens_used FROM threads');
+    }
+  } finally {
+    db.close();
   }
 }
 
@@ -272,67 +284,57 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
     // Supplemental: SQLite for hour distribution + session timing
     if (existsSync(db)) {
       try {
-        const conn = openDb(db);
-        try {
-          const rows = loadThreadRows(conn);
-          for (const row of rows) {
-            const start = parseTimestamp(row.created_at);
-            const end = parseTimestamp(row.updated_at);
-            if (start) {
-              const h = String(start.getHours());
-              hourCounts[h] = (hourCounts[h] || 0) + 1;
-            }
-            if (start && end && end.getTime() > start.getTime()) {
-              sessionDurations.push((end.getTime() - start.getTime()) / 1000);
-            }
+        const rows = await loadThreadRows(db);
+        for (const row of rows) {
+          const start = parseTimestamp(row.created_at);
+          const end = parseTimestamp(row.updated_at);
+          if (start) {
+            const h = String(start.getHours());
+            hourCounts[h] = (hourCounts[h] || 0) + 1;
           }
-        } finally {
-          conn.close();
+          if (start && end && end.getTime() > start.getTime()) {
+            sessionDurations.push((end.getTime() - start.getTime()) / 1000);
+          }
         }
       } catch { /* SQLite unavailable, skip */ }
     }
   } else if (existsSync(db)) {
     // Fallback: SQLite-only mode
     try {
-      const conn = openDb(db);
-      try {
-        const rows = loadThreadRows(conn);
-        for (const row of rows) {
-          const d = parseTimestamp(row.created_at);
-          if (!d) continue;
-          const date = d.toISOString().slice(0, 10);
-          if (yearFilter && !date.startsWith(String(yearFilter))) continue;
+      const rows = await loadThreadRows(db);
+      for (const row of rows) {
+        const d = parseTimestamp(row.created_at);
+        if (!d) continue;
+        const date = d.toISOString().slice(0, 10);
+        if (yearFilter && !date.startsWith(String(yearFilter))) continue;
 
-          const tokens = row.tokens_used || 0;
-          const inputTokens = tokens;
-          const outputTokens = 0;
+        const tokens = row.tokens_used || 0;
+        const inputTokens = tokens;
+        const outputTokens = 0;
 
-          if (!dayMap.has(date)) {
-            dayMap.set(date, {
-              inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
-              sessions: 0, messages: 0, models: {},
-            });
-          }
-          const day = dayMap.get(date)!;
-          day.inputTokens += inputTokens;
-          day.outputTokens += outputTokens;
-          day.sessions += 1;
-          day.messages += 1;
-
-          totalSessions++;
-          totalMessages++;
-          if (!firstDate || date < firstDate) firstDate = date;
-
-          const h = String(d.getHours());
-          hourCounts[h] = (hourCounts[h] || 0) + 1;
-
-          const end = parseTimestamp(row.updated_at);
-          if (end && end.getTime() > d.getTime()) {
-            sessionDurations.push((end.getTime() - d.getTime()) / 1000);
-          }
+        if (!dayMap.has(date)) {
+          dayMap.set(date, {
+            inputTokens: 0, outputTokens: 0, cacheReadTokens: 0,
+            sessions: 0, messages: 0, models: {},
+          });
         }
-      } finally {
-        conn.close();
+        const day = dayMap.get(date)!;
+        day.inputTokens += inputTokens;
+        day.outputTokens += outputTokens;
+        day.sessions += 1;
+        day.messages += 1;
+
+        totalSessions++;
+        totalMessages++;
+        if (!firstDate || date < firstDate) firstDate = date;
+
+        const h = String(d.getHours());
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
+
+        const end = parseTimestamp(row.updated_at);
+        if (end && end.getTime() > d.getTime()) {
+          sessionDurations.push((end.getTime() - d.getTime()) / 1000);
+        }
       }
     } catch {
       return null;

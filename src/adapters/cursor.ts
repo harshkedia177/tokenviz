@@ -20,16 +20,19 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function extractAccessToken(dbPath: string): string | null {
+async function extractAccessToken(dbPath: string): Promise<string | null> {
   try {
-    const conn = openDb(dbPath);
+    const db = await openDb(dbPath);
     try {
-      const row = conn.prepare(
+      const result = db.exec(
         "SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken'",
-      ).get() as { value: string } | undefined;
-      return row?.value || null;
+      );
+      if (result.length > 0 && result[0].values.length > 0) {
+        return (result[0].values[0][0] as string) || null;
+      }
+      return null;
     } finally {
-      conn.close();
+      db.close();
     }
   } catch {
     return null;
@@ -230,21 +233,22 @@ function parseCsv(csv: string, yearFilter: number | null): { days: DayData[]; mo
   return { days, modelUsage, hourCounts: {} };
 }
 
-function loadLocalStats(dbPath: string, yearFilter: number | null): { days: DayData[]; modelUsage: Record<string, number> } | null {
+async function loadLocalStats(dbPath: string, yearFilter: number | null): Promise<{ days: DayData[]; modelUsage: Record<string, number> } | null> {
   try {
-    const conn = openDb(dbPath);
+    const db = await openDb(dbPath);
     try {
-      const rows = conn.prepare(
+      const result = db.exec(
         "SELECT key, value FROM ItemTable WHERE key LIKE 'aiCodeTracking.dailyStats.v1.5.%'",
-      ).all() as Array<{ key: string; value: string }>;
+      );
 
-      if (!rows.length) return null;
+      if (!result.length || !result[0].values.length) return null;
 
       const days: DayData[] = [];
-      for (const row of rows) {
-        if (!row.value) continue;
+      for (const row of result[0].values) {
+        const value = row[1] as string;
+        if (!value) continue;
         try {
-          const data = JSON.parse(row.value) as Record<string, unknown>;
+          const data = JSON.parse(value) as Record<string, unknown>;
           const date = data.date as string | undefined;
           if (!date) continue;
           if (yearFilter && !date.startsWith(String(yearFilter))) continue;
@@ -269,33 +273,35 @@ function loadLocalStats(dbPath: string, yearFilter: number | null): { days: DayD
       days.sort((a, b) => a.date.localeCompare(b.date));
       return { days, modelUsage: {} };
     } finally {
-      conn.close();
+      db.close();
     }
   } catch {
     return null;
   }
 }
 
-function loadHourlyDistribution(): Record<string, number> {
+async function loadHourlyDistribution(): Promise<Record<string, number>> {
   const dbPath = join(homedir(), '.cursor', 'ai-tracking', 'ai-code-tracking.db');
   if (!existsSync(dbPath)) return {};
 
   try {
-    const conn = openDb(dbPath);
+    const db = await openDb(dbPath);
     try {
-      const rows = conn.prepare(
+      const result = db.exec(
         `SELECT CAST(strftime('%H', datetime(timestamp / 1000, 'unixepoch', 'localtime')) AS INTEGER) AS hour,
                 COUNT(*) AS cnt
          FROM ai_code_hashes
          GROUP BY hour`,
-      ).all() as Array<{ hour: number; cnt: number }>;
+      );
       const hourCounts: Record<string, number> = {};
-      for (const row of rows) {
-        hourCounts[String(row.hour)] = row.cnt;
+      if (result.length > 0) {
+        for (const row of result[0].values) {
+          hourCounts[String(row[0])] = row[1] as number;
+        }
       }
       return hourCounts;
     } finally {
-      conn.close();
+      db.close();
     }
   } catch {
     return {};
@@ -312,7 +318,7 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
   let usedApi = false;
 
   for (const dbPath of dbPaths) {
-    const accessToken = extractAccessToken(dbPath);
+    const accessToken = await extractAccessToken(dbPath);
     if (!accessToken) continue;
 
     const csv = await fetchUsageCsv(accessToken);
@@ -328,7 +334,7 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
 
   if (!usedApi || days.length === 0) {
     for (const dbPath of dbPaths) {
-      const local = loadLocalStats(dbPath, yearFilter);
+      const local = await loadLocalStats(dbPath, yearFilter);
       if (local && local.days.length > 0) {
         days = local.days;
         modelUsage = local.modelUsage;
@@ -340,7 +346,7 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
   if (!days.length) return null;
 
   // Supplemental: hourly distribution
-  const supplementalHours = loadHourlyDistribution();
+  const supplementalHours = await loadHourlyDistribution();
   hourCounts = { ...supplementalHours, ...hourCounts };
 
   let totalSessions = 0;

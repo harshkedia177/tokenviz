@@ -42,29 +42,32 @@ function parseMessageData(data: Record<string, unknown>): ParsedMessage | null {
   return { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, model, timestamp };
 }
 
-function loadFromDb(dbPath: string): ParsedMessage[] {
-  const conn = openDb(dbPath);
+async function loadFromDb(dbPath: string): Promise<ParsedMessage[]> {
+  const db = await openDb(dbPath);
   const messages: ParsedMessage[] = [];
   try {
-    const rows = conn.prepare('SELECT id, data FROM message ORDER BY time_created ASC').all() as Array<{ id: string; data: string | Buffer }>;
+    const result = db.exec('SELECT id, data FROM message ORDER BY time_created ASC');
+    if (!result.length) return messages;
     const seenIds = new Set<string>();
-    for (const row of rows) {
-      if (!row.data) continue;
-      if (row.id && seenIds.has(row.id)) continue;
-      const raw = typeof row.data === 'string' ? row.data : String(row.data);
+    for (const row of result[0].values) {
+      const id = row[0] as string;
+      const rawData = row[1];
+      if (!rawData) continue;
+      if (id && seenIds.has(id)) continue;
+      const raw = typeof rawData === 'string' ? rawData : String(rawData);
       if (Buffer.byteLength(raw) > MAX_BYTES) continue;
       try {
         const data = JSON.parse(raw) as Record<string, unknown>;
         const parsed = parseMessageData(data);
         if (parsed) {
-          parsed.id = row.id;
+          parsed.id = id;
           messages.push(parsed);
-          if (row.id) seenIds.add(row.id);
+          if (id) seenIds.add(id);
         }
       } catch { /* skip malformed */ }
     }
   } finally {
-    conn.close();
+    db.close();
   }
   return messages;
 }
@@ -152,7 +155,7 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
   let messages: ParsedMessage[] = [];
   if (existsSync(paths.db)) {
     try {
-      messages = loadFromDb(paths.db);
+      messages = await loadFromDb(paths.db);
     } catch {
       // Fallback to file-based loading
       messages = await loadFromFiles(paths.messages);
