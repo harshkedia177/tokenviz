@@ -35,7 +35,7 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
   const lines: string[] = [];
   const isMultiTool = panels.length > 1;
 
-  lines.push(txt.bold(' braggrid'));
+  lines.push(txt.bold(' tokenburn'));
   if (opts.user) {
     lines.push(lbl(` @${opts.user}`));
   }

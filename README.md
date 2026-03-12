@@ -1,21 +1,21 @@
 <div align="center">
 
-# braggrid
+# tokenburn
 
 **Your AI coding stats, visualized.**
 
 A GitHub-style contribution heatmap that shows how much you actually use AI coding tools.
 One command. Auto-detected. Shareable.
 
-[![npm version](https://img.shields.io/npm/v/braggrid.svg)](https://www.npmjs.com/package/braggrid)
-[![license](https://img.shields.io/npm/l/braggrid.svg)](https://github.com/harshkedia177/braggrid/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/tokenburn.svg)](https://www.npmjs.com/package/tokenburn)
+[![license](https://img.shields.io/npm/l/tokenburn.svg)](https://github.com/harshkedia177/tokenburn/blob/main/LICENSE)
 
 </div>
 
 ---
 
 ```
-npx braggrid@latest
+npx tokenburn@latest
 ```
 
 That's it. It reads your local data, renders a heatmap in your terminal, and exports a shareable PNG.
@@ -24,13 +24,13 @@ That's it. It reads your local data, renders a heatmap in your terminal, and exp
 
 ### Single Tool View
 
-<img src="assets/demo-single.png" alt="braggrid — single tool heatmap" width="720" />
+<img src="assets/demo-single.png" alt="tokenburn — single tool heatmap" width="720" />
 
 <br />
 
 ### Multi-Tool View
 
-<img src="assets/demo.png" alt="braggrid — multi-tool heatmap" width="720" />
+<img src="assets/demo.png" alt="tokenburn — multi-tool heatmap" width="720" />
 
 </div>
 
@@ -45,23 +45,23 @@ That's it. It reads your local data, renders a heatmap in your terminal, and exp
 | **OpenCode** | `~/.local/share/opencode/` | Tokens, models, messages |
 | **Cursor** | Cursor API + local `state.vscdb` | Tokens, models, usage events |
 
-braggrid auto-detects which tools you have installed. No configuration needed.
+tokenburn auto-detects which tools you have installed. No configuration needed.
 
 ## Install
 
 ```bash
 # Run directly (no install)
-npx braggrid@latest
+npx tokenburn@latest
 
 # Run stats for a specific tool
-npx braggrid@latest --claude
-npx braggrid@latest --codex
-npx braggrid@latest --cursor
-npx braggrid@latest --opencode
+npx tokenburn@latest --claude
+npx tokenburn@latest --codex
+npx tokenburn@latest --cursor
+npx tokenburn@latest --opencode
 
 # Or install globally
-npm install -g braggrid
-braggrid
+npm install -g tokenburn
+tokenburn
 ```
 
 Requires **Node.js 18+**.
@@ -84,49 +84,49 @@ A full-color contribution grid right in your terminal, with:
 Automatically exports a high-quality image you can share on Twitter, LinkedIn, your blog, or anywhere.
 
 ```bash
-braggrid --user yourname              # PNG with your name
-braggrid --user yourname --export svg # SVG export
-braggrid --user yourname --copy       # PNG + copy to clipboard
+tokenburn --user yourname              # PNG with your name
+tokenburn --user yourname --export svg # SVG export
+tokenburn --user yourname --copy       # PNG + copy to clipboard
 ```
 
 ## Usage
 
 ```bash
 # Basic — auto-detect all tools, export PNG
-braggrid
+tokenburn
 
 # Add your name to the heatmap
-braggrid --user yourname
+tokenburn --user yourname
 
 # Filter to a specific tool
-braggrid --claude
-braggrid --codex
-braggrid --cursor
-braggrid --opencode
+tokenburn --claude
+tokenburn --codex
+tokenburn --cursor
+tokenburn --opencode
 
 # Filter to a specific year
-braggrid --year 2025
+tokenburn --year 2025
 
 # Change the color theme
-braggrid --theme dark-green
+tokenburn --theme dark-green
 
 # Export as SVG instead of PNG
-braggrid --export svg
+tokenburn --export svg
 
 # Custom output path
-braggrid --out ~/Desktop/my-ai-usage.png
+tokenburn --out ~/Desktop/my-ai-usage.png
 
 # Terminal only, no file export
-braggrid --no-export
+tokenburn --no-export
 
 # Copy PNG to clipboard (macOS/Linux/Windows)
-braggrid --copy
+tokenburn --copy
 
 # Dump raw stats as JSON (for scripting)
-braggrid --json
+tokenburn --json
 
 # See all themes
-braggrid --list-themes
+tokenburn --list-themes
 ```
 
 ## Themes
@@ -142,8 +142,8 @@ braggrid --list-themes
 | `dark-mono` | `mono` |
 
 ```bash
-braggrid --theme dark-purple
-braggrid --theme amber
+tokenburn --theme dark-purple
+tokenburn --theme amber
 ```
 
 ## Options
@@ -158,7 +158,7 @@ braggrid --theme amber
 | `--theme <name>` | Color theme | `green` |
 | `--export <fmt>` | Export format: `png` or `svg` | `png` |
 | `--no-export` | Skip file export, terminal only | — |
-| `--out <path>` | Custom output file path | `braggrid.png` |
+| `--out <path>` | Custom output file path | `tokenburn.png` |
 | `--copy` | Copy PNG to clipboard after export | — |
 | `--year <year>` | Filter to a specific year | last 365 days |
 | `--json` | Output raw stats as JSON | — |
@@ -166,7 +166,7 @@ braggrid --theme amber
 
 ## How It Works
 
-braggrid reads **locally stored data** from your AI coding tools. It never sends data anywhere — everything stays on your machine.
+tokenburn reads **locally stored data** from your AI coding tools. It never sends data anywhere — everything stays on your machine.
 
 1. **Detect** — scans for installed tool data directories
 2. **Aggregate** — merges token usage, sessions, and model stats across tools
@@ -182,25 +182,25 @@ braggrid reads **locally stored data** from your AI coding tools. It never sends
 ## FAQ
 
 **Q: I don't see any data?**
-Make sure you've actually used one of the supported tools. braggrid reads from the default data locations — if you've customized paths, set the environment variable:
+Make sure you've actually used one of the supported tools. tokenburn reads from the default data locations — if you've customized paths, set the environment variable:
 - `CLAUDE_CONFIG_DIR` for Claude Code
 - `CODEX_HOME` for Codex CLI
 - `OPENCODE_DATA_DIR` for OpenCode
 - `CURSOR_STATE_DB_PATH` or `CURSOR_CONFIG_DIR` for Cursor
 
 **Q: Can I use this in CI/scripts?**
-Yes — `braggrid --json` outputs machine-readable JSON.
+Yes — `tokenburn --json` outputs machine-readable JSON.
 
 **Q: The Cursor data seems low?**
-If the API fetch fails (auth issues), braggrid falls back to local line-count tracking which estimates tokens. The API-based data is more accurate.
+If the API fetch fails (auth issues), tokenburn falls back to local line-count tracking which estimates tokens. The API-based data is more accurate.
 
 ## Contributing
 
 PRs welcome! The codebase is TypeScript with ESM modules.
 
 ```bash
-git clone https://github.com/harshkedia177/braggrid.git
-cd braggrid
+git clone https://github.com/harshkedia177/tokenburn.git
+cd tokenburn
 npm install
 npm run dev    # watch mode
 node dist/bin.js --list-themes

@@ -181,7 +181,7 @@ export function renderSVG(panels: ToolPanel[], opts: RenderOptions = {}): string
   </style>`);
 
   let y = 0;
-  parts.push(`<text x="${MARGIN.left}" y="26" class="title" dominant-baseline="auto">${escapeXml('braggrid')}</text>`);
+  parts.push(`<text x="${MARGIN.left}" y="26" class="title" dominant-baseline="auto">${escapeXml('tokenburn')}</text>`);
   if (user) {
     parts.push(`<text x="${MARGIN.left}" y="44" class="subtitle" dominant-baseline="auto">@${escapeXml(user)}</text>`);
     y = 64;
