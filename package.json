@@ -1,0 +1,62 @@
+{
+  "name": "braggrid",
+  "version": "0.1.0",
+  "description": "GitHub-style contribution heatmap for your AI coding tool usage. Supports Claude Code, Codex, OpenCode & Cursor.",
+  "type": "module",
+  "bin": {
+    "braggrid": "./dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "tsc"
+  },
+  "files": [
+    "dist/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "cli",
+    "heatmap",
+    "contribution-graph",
+    "github-style",
+    "claude-code",
+    "claude",
+    "codex",
+    "opencode",
+    "cursor",
+    "ai",
+    "ai-tools",
+    "coding-assistant",
+    "usage",
+    "tokens",
+    "statistics",
+    "terminal",
+    "developer-tools",
+    "devtools"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harshkedia177/braggrid"
+  },
+  "homepage": "https://github.com/harshkedia177/braggrid#readme",
+  "bugs": {
+    "url": "https://github.com/harshkedia177/braggrid/issues"
+  },
+  "author": "Harsh Kedia",
+  "dependencies": {
+    "chalk": "^5.4.0",
+    "clipboardy": "^4.0.0",
+    "commander": "^13.0.0",
+    "better-sqlite3": "^11.0.0",
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+braggrid.png
+braggrid.svg
+braggrid-*.png
+braggrid-*.svg
+*.tgz
+.DS_Store
+docs/
