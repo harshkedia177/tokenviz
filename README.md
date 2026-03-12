@@ -1,21 +1,21 @@
 <div align="center">
 
-# tokenburn
+# tokenviz
 
 **Your AI coding stats, visualized.**
 
 A GitHub-style contribution heatmap that shows how much you actually use AI coding tools.
 One command. Auto-detected. Shareable.
 
-[![npm version](https://img.shields.io/npm/v/tokenburn.svg)](https://www.npmjs.com/package/tokenburn)
-[![license](https://img.shields.io/npm/l/tokenburn.svg)](https://github.com/harshkedia177/tokenburn/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/tokenviz.svg)](https://www.npmjs.com/package/tokenviz)
+[![license](https://img.shields.io/npm/l/tokenviz.svg)](https://github.com/harshkedia177/tokenviz/blob/main/LICENSE)
 
 </div>
 
 ---
 
 ```
-npx tokenburn@latest
+npx tokenviz@latest
 ```
 
 That's it. It reads your local data, renders a heatmap in your terminal, and exports a shareable PNG.
@@ -24,13 +24,13 @@ That's it. It reads your local data, renders a heatmap in your terminal, and exp
 
 ### Single Tool View
 
-<img src="assets/demo-single.png" alt="tokenburn — single tool heatmap" width="720" />
+<img src="assets/demo-single.png" alt="tokenviz — single tool heatmap" width="720" />
 
 <br />
 
 ### Multi-Tool View
 
-<img src="assets/demo.png" alt="tokenburn — multi-tool heatmap" width="720" />
+<img src="assets/demo.png" alt="tokenviz — multi-tool heatmap" width="720" />
 
 </div>
 
@@ -45,23 +45,23 @@ That's it. It reads your local data, renders a heatmap in your terminal, and exp
 | **OpenCode** | `~/.local/share/opencode/` | Tokens, models, messages |
 | **Cursor** | Cursor API + local `state.vscdb` | Tokens, models, usage events |
 
-tokenburn auto-detects which tools you have installed. No configuration needed.
+tokenviz auto-detects which tools you have installed. No configuration needed.
 
 ## Install
 
 ```bash
 # Run directly (no install)
-npx tokenburn@latest
+npx tokenviz@latest
 
 # Run stats for a specific tool
-npx tokenburn@latest --claude
-npx tokenburn@latest --codex
-npx tokenburn@latest --cursor
-npx tokenburn@latest --opencode
+npx tokenviz@latest --claude
+npx tokenviz@latest --codex
+npx tokenviz@latest --cursor
+npx tokenviz@latest --opencode
 
 # Or install globally
-npm install -g tokenburn
-tokenburn
+npm install -g tokenviz
+tokenviz
 ```
 
 Requires **Node.js 18+**.
@@ -84,49 +84,49 @@ A full-color contribution grid right in your terminal, with:
 Automatically exports a high-quality image you can share on Twitter, LinkedIn, your blog, or anywhere.
 
 ```bash
-tokenburn --user yourname              # PNG with your name
-tokenburn --user yourname --export svg # SVG export
-tokenburn --user yourname --copy       # PNG + copy to clipboard
+tokenviz --user yourname              # PNG with your name
+tokenviz --user yourname --export svg # SVG export
+tokenviz --user yourname --copy       # PNG + copy to clipboard
 ```
 
 ## Usage
 
 ```bash
 # Basic — auto-detect all tools, export PNG
-tokenburn
+tokenviz
 
 # Add your name to the heatmap
-tokenburn --user yourname
+tokenviz --user yourname
 
 # Filter to a specific tool
-tokenburn --claude
-tokenburn --codex
-tokenburn --cursor
-tokenburn --opencode
+tokenviz --claude
+tokenviz --codex
+tokenviz --cursor
+tokenviz --opencode
 
 # Filter to a specific year
-tokenburn --year 2025
+tokenviz --year 2025
 
 # Change the color theme
-tokenburn --theme dark-green
+tokenviz --theme dark-green
 
 # Export as SVG instead of PNG
-tokenburn --export svg
+tokenviz --export svg
 
 # Custom output path
-tokenburn --out ~/Desktop/my-ai-usage.png
+tokenviz --out ~/Desktop/my-ai-usage.png
 
 # Terminal only, no file export
-tokenburn --no-export
+tokenviz --no-export
 
 # Copy PNG to clipboard (macOS/Linux/Windows)
-tokenburn --copy
+tokenviz --copy
 
 # Dump raw stats as JSON (for scripting)
-tokenburn --json
+tokenviz --json
 
 # See all themes
-tokenburn --list-themes
+tokenviz --list-themes
 ```
 
 ## Themes
@@ -142,8 +142,8 @@ tokenburn --list-themes
 | `dark-mono` | `mono` |
 
 ```bash
-tokenburn --theme dark-purple
-tokenburn --theme amber
+tokenviz --theme dark-purple
+tokenviz --theme amber
 ```
 
 ## Options
@@ -158,7 +158,7 @@ tokenburn --theme amber
 | `--theme <name>` | Color theme | `green` |
 | `--export <fmt>` | Export format: `png` or `svg` | `png` |
 | `--no-export` | Skip file export, terminal only | — |
-| `--out <path>` | Custom output file path | `tokenburn.png` |
+| `--out <path>` | Custom output file path | `tokenviz.png` |
 | `--copy` | Copy PNG to clipboard after export | — |
 | `--year <year>` | Filter to a specific year | last 365 days |
 | `--json` | Output raw stats as JSON | — |
@@ -166,7 +166,7 @@ tokenburn --theme amber
 
 ## How It Works
 
-tokenburn reads **locally stored data** from your AI coding tools. It never sends data anywhere — everything stays on your machine.
+tokenviz reads **locally stored data** from your AI coding tools. It never sends data anywhere — everything stays on your machine.
 
 1. **Detect** — scans for installed tool data directories
 2. **Aggregate** — merges token usage, sessions, and model stats across tools
@@ -182,25 +182,25 @@ tokenburn reads **locally stored data** from your AI coding tools. It never send
 ## FAQ
 
 **Q: I don't see any data?**
-Make sure you've actually used one of the supported tools. tokenburn reads from the default data locations — if you've customized paths, set the environment variable:
+Make sure you've actually used one of the supported tools. tokenviz reads from the default data locations — if you've customized paths, set the environment variable:
 - `CLAUDE_CONFIG_DIR` for Claude Code
 - `CODEX_HOME` for Codex CLI
 - `OPENCODE_DATA_DIR` for OpenCode
 - `CURSOR_STATE_DB_PATH` or `CURSOR_CONFIG_DIR` for Cursor
 
 **Q: Can I use this in CI/scripts?**
-Yes — `tokenburn --json` outputs machine-readable JSON.
+Yes — `tokenviz --json` outputs machine-readable JSON.
 
 **Q: The Cursor data seems low?**
-If the API fetch fails (auth issues), tokenburn falls back to local line-count tracking which estimates tokens. The API-based data is more accurate.
+If the API fetch fails (auth issues), tokenviz falls back to local line-count tracking which estimates tokens. The API-based data is more accurate.
 
 ## Contributing
 
 PRs welcome! The codebase is TypeScript with ESM modules.
 
 ```bash
-git clone https://github.com/harshkedia177/tokenburn.git
-cd tokenburn
+git clone https://github.com/harshkedia177/tokenviz.git
+cd tokenviz
 npm install
 npm run dev    # watch mode
 node dist/bin.js --list-themes

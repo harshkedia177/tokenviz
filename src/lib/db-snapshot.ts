@@ -12,7 +12,7 @@ export async function openDb(dbPath: string): Promise<SqlJsDatabase> {
   } catch (e: unknown) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === 'EBUSY' || err.message?.includes('locked') || err.message?.includes('SQLITE_BUSY')) {
-      const tmp = mkdtempSync(join(tmpdir(), 'tokenburn-'));
+      const tmp = mkdtempSync(join(tmpdir(), 'tokenviz-'));
       const name = dbPath.split('/').pop()!;
       const tmpDb = join(tmp, name);
       copyFileSync(dbPath, tmpDb);

@@ -1,9 +1,9 @@
 node_modules/
 dist/
-tokenburn.png
-tokenburn.svg
-tokenburn-*.png
-tokenburn-*.svg
+tokenviz.png
+tokenviz.svg
+tokenviz-*.png
+tokenviz-*.svg
 *.tgz
 .DS_Store
 docs/

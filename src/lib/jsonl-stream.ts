@@ -17,7 +17,7 @@ export async function* streamJsonl(
     lineNum++;
     if (!line.trim()) continue;
     if (Buffer.byteLength(line) > MAX_BYTES) {
-      console.warn(`[tokenburn] Skipping oversized record: ${filePath}:${lineNum} (>${MAX_BYTES} bytes)`);
+      console.warn(`[tokenviz] Skipping oversized record: ${filePath}:${lineNum} (>${MAX_BYTES} bytes)`);
       continue;
     }
     if (preFilter && !preFilter(line)) continue;

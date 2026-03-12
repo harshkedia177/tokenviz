@@ -41,7 +41,7 @@ interface CLIOptions {
 }
 
 program
-  .name('tokenburn')
+  .name('tokenviz')
   .description('Shareable heatmap of your AI coding tool usage')
   .version('0.2.0')
   .option('--claude', 'Include Claude Code data')
@@ -119,7 +119,7 @@ program
         let savedPermission = false;
 
         if (format === 'svg') {
-          const outPath = opts.out || `tokenburn_${ts}.svg`;
+          const outPath = opts.out || `tokenviz_${ts}.svg`;
           if (!savedPermission) {
             const ok = await confirmSave(resolve(outPath));
             if (!ok) { console.log('Skipped saving.'); return; }
@@ -128,7 +128,7 @@ program
           writeFileSync(outPath, svg);
           console.log(`\nSaved to ${resolve(outPath)}`);
         } else {
-          const outPath = opts.out || `tokenburn_${ts}.png`;
+          const outPath = opts.out || `tokenviz_${ts}.png`;
           if (!savedPermission) {
             const ok = await confirmSave(resolve(outPath));
             if (!ok) { console.log('Skipped saving.'); return; }

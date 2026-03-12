@@ -35,7 +35,7 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
   const lines: string[] = [];
   const isMultiTool = panels.length > 1;
 
-  lines.push(txt.bold(' tokenburn'));
+  lines.push(txt.bold(' tokenviz'));
   if (opts.user) {
     lines.push(lbl(` @${opts.user}`));
   }
