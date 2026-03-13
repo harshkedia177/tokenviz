@@ -5,6 +5,7 @@ import { renderSVG } from './render/svg.js';
 import { svgToPng } from './render/png.js';
 import { copyImageToClipboard } from './clipboard.js';
 import { getAllThemeNames, getBgColor } from './themes.js';
+import { setVerbose } from './lib/debug.js';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { createInterface } from 'readline';
@@ -38,6 +39,7 @@ interface CLIOptions {
   year?: number;
   json?: boolean;
   listThemes?: boolean;
+  verbose?: boolean;
 }
 
 program
@@ -63,6 +65,7 @@ program
   })
   .option('--json', 'Output raw stats as JSON')
   .option('--list-themes', 'Show all available themes')
+  .option('--verbose', 'Show debug output for troubleshooting')
   .action(async (opts: CLIOptions) => {
     try {
       if (opts.listThemes) {
@@ -87,6 +90,8 @@ program
         console.error(`Unknown export format: ${format}. Supported: png, svg`);
         process.exit(1);
       }
+
+      if (opts.verbose) setVerbose(true);
 
       const tools: string[] = [];
       if (opts.claude) tools.push('claude');

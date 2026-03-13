@@ -3,6 +3,7 @@ import * as codex from './adapters/codex.js';
 import * as opencode from './adapters/opencode.js';
 import * as cursor from './adapters/cursor.js';
 import { computeStats } from './stats.js';
+import { debug } from './lib/debug.js';
 import type { Adapter, AdapterResult, AggregatedData, DayData, ToolCapabilities, ToolPanel } from './types.js';
 
 const adapters: Record<string, Adapter> = { claude, codex, opencode, cursor };
@@ -81,23 +82,38 @@ export async function aggregateMulti(opts: { tools?: string[]; year?: number } =
     }
     adapterNames = opts.tools;
   } else {
-    adapterNames = Object.keys(adapters).filter(name => adapters[name].detect());
+    adapterNames = Object.keys(adapters).filter(name => {
+      const found = adapters[name].detect();
+      debug(`${name}: detect() = ${found}`);
+      return found;
+    });
   }
 
+  debug(`Adapters to load: ${adapterNames.join(', ') || '(none)'}`);
   const explicit = opts.tools && opts.tools.length > 0;
 
   const results = await Promise.all(
     adapterNames.map(async (name) => {
       try {
+        debug(`${name}: loading...`);
         const result = await adapters[name].load(year ?? null);
-        if (!result) return null;
+        if (!result) {
+          debug(`${name}: load() returned null (no data)`);
+          return null;
+        }
         const data = toAggregatedData(name, result);
         const stats = computeStats(data);
+        debug(`${name}: ${result.days.length} days, ${stats.totalTokens} tokens`);
         // Skip tools with no actual token data (unless explicitly requested)
         if (!explicit && stats.totalTokens === 0) return null;
         const capabilities = CAPABILITIES[name] || { hasAvgSession: false, hasPeakHour: false };
         return { tool: name, data, stats, capabilities } as ToolPanel;
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        debug(`${name}: load() threw: ${msg}`);
+        if (explicit) {
+          console.error(`Error loading ${name} data: ${msg}`);
+        }
         return null;
       }
     }),

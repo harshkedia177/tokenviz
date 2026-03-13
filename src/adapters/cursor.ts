@@ -3,6 +3,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { cursorStatePaths } from '../lib/paths.js';
 import { openDb } from '../lib/db-snapshot.js';
+import { debug } from '../lib/debug.js';
 import type { DayData, AdapterResult } from '../types.js';
 
 export function detect(): boolean {
@@ -22,19 +23,24 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 
 async function extractAccessToken(dbPath: string): Promise<string | null> {
   try {
+    debug(`cursor: opening DB ${dbPath}`);
     const db = await openDb(dbPath);
     try {
       const result = db.exec(
         "SELECT value FROM ItemTable WHERE key = 'cursorAuth/accessToken'",
       );
       if (result.length > 0 && result[0].values.length > 0) {
-        return (result[0].values[0][0] as string) || null;
+        const token = (result[0].values[0][0] as string) || null;
+        debug(`cursor: access token ${token ? `found (${token.length} chars)` : 'is empty'}`);
+        return token;
       }
+      debug('cursor: no access token row found in ItemTable');
       return null;
     } finally {
       db.close();
     }
-  } catch {
+  } catch (err) {
+    debug(`cursor: failed to read access token: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
@@ -75,13 +81,16 @@ async function fetchUsageCsv(accessToken: string): Promise<string | null> {
     });
   }
 
+  debug(`cursor: trying ${strategies.length} auth strategies against API`);
   for (const opts of strategies) {
     try {
+      debug(`cursor: trying strategy '${opts.label}'`);
       const res = await fetch(url, {
         method: 'GET',
         headers: { ...opts.headers, Accept: 'text/csv' },
         signal: AbortSignal.timeout(10_000),
       });
+      debug(`cursor: strategy '${opts.label}' → HTTP ${res.status}`);
       if (res.ok) {
         const text = await res.text();
         // Validate it looks like CSV: must have a comma-separated header row
@@ -90,11 +99,17 @@ async function fetchUsageCsv(accessToken: string): Promise<string | null> {
         const hasComma = firstLine.includes(',');
         const hasKnownColumn = /\b(Date|Model|Tokens|Total Tokens|Output Tokens)\b/.test(firstLine);
         if (hasComma && hasKnownColumn) {
+          const lineCount = text.split('\n').filter(l => l.trim()).length;
+          debug(`cursor: API returned valid CSV (${lineCount} lines)`);
           return text;
         }
+        debug(`cursor: response is not valid CSV (header: "${firstLine.slice(0, 80)}")`);
       }
-    } catch { /* try next strategy */ }
+    } catch (err) {
+      debug(`cursor: strategy '${opts.label}' failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
+  debug('cursor: all API strategies failed, will try local stats');
   return null;
 }
 
@@ -235,13 +250,18 @@ function parseCsv(csv: string, yearFilter: number | null): { days: DayData[]; mo
 
 async function loadLocalStats(dbPath: string, yearFilter: number | null): Promise<{ days: DayData[]; modelUsage: Record<string, number> } | null> {
   try {
+    debug(`cursor: loading local stats from ${dbPath}`);
     const db = await openDb(dbPath);
     try {
       const result = db.exec(
         "SELECT key, value FROM ItemTable WHERE key LIKE 'aiCodeTracking.dailyStats.v1.5.%'",
       );
 
-      if (!result.length || !result[0].values.length) return null;
+      if (!result.length || !result[0].values.length) {
+        debug('cursor: no local dailyStats rows found');
+        return null;
+      }
+      debug(`cursor: found ${result[0].values.length} local dailyStats rows`);
 
       const days: DayData[] = [];
       for (const row of result[0].values) {
@@ -271,18 +291,23 @@ async function loadLocalStats(dbPath: string, yearFilter: number | null): Promis
       }
 
       days.sort((a, b) => a.date.localeCompare(b.date));
+      debug(`cursor: local stats produced ${days.length} days`);
       return { days, modelUsage: {} };
     } finally {
       db.close();
     }
-  } catch {
+  } catch (err) {
+    debug(`cursor: loadLocalStats failed: ${err instanceof Error ? err.message : String(err)}`);
     return null;
   }
 }
 
 async function loadHourlyDistribution(): Promise<Record<string, number>> {
   const dbPath = join(homedir(), '.cursor', 'ai-tracking', 'ai-code-tracking.db');
-  if (!existsSync(dbPath)) return {};
+  if (!existsSync(dbPath)) {
+    debug(`cursor: hourly DB not found at ${dbPath}`);
+    return {};
+  }
 
   try {
     const db = await openDb(dbPath);
@@ -303,13 +328,15 @@ async function loadHourlyDistribution(): Promise<Record<string, number>> {
     } finally {
       db.close();
     }
-  } catch {
+  } catch (err) {
+    debug(`cursor: loadHourlyDistribution failed: ${err instanceof Error ? err.message : String(err)}`);
     return {};
   }
 }
 
 export async function load(yearFilter: number | null): Promise<AdapterResult | null> {
   const dbPaths = cursorStatePaths();
+  debug(`cursor: state DB paths: ${dbPaths.length > 0 ? dbPaths.join(', ') : '(none found)'}`);
   if (!dbPaths.length) return null;
 
   let days: DayData[] = [];
