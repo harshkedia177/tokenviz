@@ -56,13 +56,11 @@ export function detect(): boolean {
 }
 
 function extractHour(timestamp: string): number {
-  // Match HH after the 'T' in ISO format: 2026-03-12T13:00:00...
-  const tIdx = timestamp.indexOf('T');
-  if (tIdx !== -1 && tIdx + 3 <= timestamp.length) {
-    const h = parseInt(timestamp.slice(tIdx + 1, tIdx + 3), 10);
-    if (h >= 0 && h <= 23) return h;
-  }
-  return new Date(timestamp).getHours();
+  // Timestamps may be UTC (Z suffix) — always use Date to convert to local time
+  const d = new Date(timestamp);
+  const h = d.getHours();
+  if (h >= 0 && h <= 23) return h;
+  return 0;
 }
 
 interface ParsedRecord {

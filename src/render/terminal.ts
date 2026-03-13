@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { getTheme, isDark } from '../themes.js';
 import { formatTokens } from '../stats.js';
-import { MONTH_NAMES, DAY_LABELS, TOOL_COLORS, buildGrid, extractDisplayStats } from './shared.js';
+import { MONTH_NAMES, DAY_LABELS, TOOL_COLORS, buildGrid, extractDisplayStats, computeGlobalTotals } from './shared.js';
 import type { ToolPanel, Theme, RenderOptions } from '../types.js';
 
 function termText(theme: Theme, themeName: string) {
@@ -40,6 +40,12 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
     lines.push(lbl(` @${opts.user}`));
   }
   lines.push('');
+
+  if (isMultiTool) {
+    const { inputTotal, outputTotal, grandTotal } = computeGlobalTotals(panels);
+    lines.push(lbl(` ${inputTotal} in / ${outputTotal} out / ${grandTotal} total`));
+    lines.push('');
+  }
 
   for (let p = 0; p < panels.length; p++) {
     const panel = panels[p];

@@ -202,6 +202,34 @@ export function renderSVG(panels: ToolPanel[], opts: RenderOptions = {}): string
   parts.push(`<text x="${MARGIN.left + metricColWidth * 2}" y="${y + 13}" class="metric-value" dominant-baseline="hanging">${escapeXml(grandTotal)}</text>`);
   y += 42;
 
+  if (isMultiTool) {
+    // Per-tool breakdown: 2 columns grid
+    const cols = 2;
+    const colWidth = gridWidth / cols;
+    const rowHeight = 32;
+
+    for (let i = 0; i < panels.length; i++) {
+      const p = panels[i];
+      const ds = extractDisplayStats(p.stats);
+      const toolColor = TOOL_COLORS[p.tool] || TOOL_COLORS.other;
+      const displayName = TOOL_DISPLAY_NAMES[p.tool] || p.tool;
+
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = MARGIN.left + col * colWidth;
+      const rowY = y + row * rowHeight;
+
+      parts.push(`<circle cx="${x + 4}" cy="${rowY + 5}" r="3.5" fill="${toolColor}" />`);
+      parts.push(`<text x="${x + 14}" y="${rowY + 6}" style="font-size: 11px; font-weight: 600; fill: ${theme.text};" dominant-baseline="middle">${escapeXml(displayName)}</text>`);
+      parts.push(`<text x="${x + 14}" y="${rowY + 20}" style="font-size: 9px; fill: ${theme.label};">${escapeXml(ds.inputTotal)} in / ${escapeXml(ds.outputTotal)} out / ${escapeXml(ds.grandTotal)} total</text>`);
+    }
+
+    const numRows = Math.ceil(panels.length / cols);
+    y += numRows * rowHeight;
+  }
+
+  y += 6;
+
   for (let i = 0; i < panels.length; i++) {
     if (i > 0) y += PANEL_GAP;
     const showMonths = i === 0;
