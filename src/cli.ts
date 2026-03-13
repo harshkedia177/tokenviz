@@ -45,7 +45,7 @@ interface CLIOptions {
 program
   .name('tokenviz')
   .description('Shareable heatmap of your AI coding tool usage')
-  .version('0.2.1')
+  .version('0.3.0')
   .option('--claude', 'Include Claude Code data')
   .option('--codex', 'Include Codex data')
   .option('--opencode', 'Include OpenCode data')

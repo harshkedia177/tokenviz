@@ -1,6 +1,6 @@
 {
   "name": "tokenviz",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "GitHub-style contribution heatmap for your AI coding tool usage. Supports Claude Code, Codex, OpenCode & Cursor.",
   "type": "module",
   "bin": {
