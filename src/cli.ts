@@ -40,6 +40,7 @@ interface CLIOptions {
   json?: boolean;
   listThemes?: boolean;
   verbose?: boolean;
+  cost?: boolean;
 }
 
 program
@@ -66,6 +67,7 @@ program
   .option('--json', 'Output raw stats as JSON')
   .option('--list-themes', 'Show all available themes')
   .option('--verbose', 'Show debug output for troubleshooting')
+  .option('--cost', 'Show estimated cost breakdown by model')
   .action(async (opts: CLIOptions) => {
     try {
       if (opts.listThemes) {
@@ -114,7 +116,7 @@ program
         return;
       }
 
-      const renderOpts = { theme: opts.theme, user: opts.user, year: opts.year };
+      const renderOpts = { theme: opts.theme, user: opts.user, year: opts.year, showCost: opts.cost };
 
       renderTerminal(panels, renderOpts);
 

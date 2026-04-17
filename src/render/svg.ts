@@ -1,5 +1,6 @@
 import { getTheme } from '../themes.js';
 import { formatTokens } from '../stats.js';
+import { computeCostSummary, formatCost } from '../pricing.js';
 import { MONTH_NAMES, DAY_LABELS, TOOL_COLORS, buildGrid, extractDisplayStats, computeGlobalTotals } from './shared.js';
 import type { ToolPanel, Theme, GridResult, RenderOptions } from '../types.js';
 
@@ -52,8 +53,9 @@ function renderPanel(
   theme: Theme,
   isMultiTool: boolean,
   showMonthLabels: boolean = true,
+  showCost: boolean = false,
 ): number {
-  const { stats, capabilities, tool } = panel;
+  const { stats, capabilities, tool, data } = panel;
   const ds = extractDisplayStats(stats);
   const { grid, weekMonths, maxTokens } = gridResult;
   const gridHeight = 7 * step - CELL_GAP;
@@ -151,6 +153,74 @@ function renderPanel(
     y += 30;
   }
 
+  // Cost breakdown section
+  if (showCost) {
+    const costSummary = computeCostSummary(data.detailedModelUsage);
+
+    if (costSummary.modelCosts.length > 0) {
+      y += 10;
+      parts.push(`<line x1="${MARGIN.left}" y1="${y}" x2="${MARGIN.left + gridWidth}" y2="${y}" stroke="${theme.label}" stroke-opacity="0.15" stroke-width="1" />`);
+      y += 18;
+
+      // Use SVG circle + "$" instead of emoji (resvg-js can't render emojis)
+      const iconX = MARGIN.left;
+      const iconCY = y + 7;
+      parts.push(`<circle cx="${iconX + 7}" cy="${iconCY}" r="8" fill="#22C55E" opacity="0.9" />`);
+      parts.push(`<text x="${iconX + 7}" y="${iconCY}" style="font-size: 11px; font-weight: 700; fill: #fff;" text-anchor="middle" dominant-baseline="central">$</text>`);
+      parts.push(`<text x="${iconX + 20}" y="${y}" style="font-size: 13px; font-weight: 700; fill: ${theme.text};" dominant-baseline="hanging">Estimated Cost</text>`);
+      y += 24;
+
+      // Column layout for cost table
+      const costCols = [
+        { label: 'MODEL', width: gridWidth * 0.30 },
+        { label: 'INPUT', width: gridWidth * 0.14 },
+        { label: 'OUTPUT', width: gridWidth * 0.14 },
+        { label: 'CACHE READ', width: gridWidth * 0.14 },
+        { label: 'CACHE WRITE', width: gridWidth * 0.14 },
+        { label: 'TOTAL', width: gridWidth * 0.14 },
+      ];
+
+      // Headers
+      let colX = MARGIN.left;
+      for (const col of costCols) {
+        parts.push(`<text x="${colX}" y="${y}" class="small-label" dominant-baseline="hanging">${escapeXml(col.label)}</text>`);
+        colX += col.width;
+      }
+      y += 16;
+
+      // Rows
+      for (const mc of costSummary.modelCosts) {
+        colX = MARGIN.left;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 11px; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(truncate(mc.model, 25))}</text>`);
+        colX += costCols[0].width;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 11px; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(formatCost(mc.inputCost))}</text>`);
+        colX += costCols[1].width;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 11px; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(formatCost(mc.outputCost))}</text>`);
+        colX += costCols[2].width;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 11px; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(formatCost(mc.cacheReadCost))}</text>`);
+        colX += costCols[3].width;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 11px; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(formatCost(mc.cacheWriteCost))}</text>`);
+        colX += costCols[4].width;
+        parts.push(`<text x="${colX}" y="${y}" style="font-size: 12px; font-weight: 700; fill: ${theme.text};" dominant-baseline="hanging">${escapeXml(formatCost(mc.totalCost))}</text>`);
+        y += 18;
+      }
+
+      // Total row
+      y += 4;
+      parts.push(`<line x1="${MARGIN.left}" y1="${y}" x2="${MARGIN.left + gridWidth}" y2="${y}" stroke="${theme.label}" stroke-opacity="0.1" stroke-width="1" />`);
+      y += 10;
+      colX = MARGIN.left;
+      parts.push(`<text x="${colX}" y="${y}" style="font-size: 12px; font-weight: 700; fill: ${theme.text};" dominant-baseline="hanging">TOTAL</text>`);
+      colX = MARGIN.left + costCols[0].width + costCols[1].width + costCols[2].width + costCols[3].width + costCols[4].width;
+      parts.push(`<text x="${colX}" y="${y}" style="font-size: 14px; font-weight: 700; fill: #22C55E;" dominant-baseline="hanging">${escapeXml(formatCost(costSummary.totalCost))}</text>`);
+      y += 20;
+
+      // Disclaimer
+      parts.push(`<text x="${MARGIN.left}" y="${y}" style="font-size: 8px; fill: ${theme.label}; opacity: 0.6;" dominant-baseline="hanging">* Estimates based on public API pricing. Actual costs may vary.</text>`);
+      y += 14;
+    }
+  }
+
   return y - yOffset;
 }
 
@@ -159,6 +229,7 @@ export function renderSVG(panels: ToolPanel[], opts: RenderOptions = {}): string
   const user = opts.user ? truncate(opts.user, 24) : null;
   const fontFamily = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
   const isMultiTool = panels.length > 1;
+  const showCost = opts.showCost ?? false;
 
   const step = CELL_SIZE + CELL_GAP;
   const panelGrids = panels.map(p => buildGrid(p.data, opts.year));
@@ -233,7 +304,7 @@ export function renderSVG(panels: ToolPanel[], opts: RenderOptions = {}): string
   for (let i = 0; i < panels.length; i++) {
     if (i > 0) y += PANEL_GAP;
     const showMonths = i === 0;
-    const panelHeight = renderPanel(parts, panels[i], panelGrids[i], y, gridWidth, numWeeks, step, theme, isMultiTool, showMonths);
+    const panelHeight = renderPanel(parts, panels[i], panelGrids[i], y, gridWidth, numWeeks, step, theme, isMultiTool, showMonths, showCost);
     y += panelHeight;
   }
 
