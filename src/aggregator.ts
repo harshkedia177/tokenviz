@@ -63,6 +63,7 @@ function toAggregatedData(name: string, result: AdapterResult): AggregatedData {
     totalMessages: result.totalMessages || 0,
     firstSessionDate: result.firstSessionDate || null,
     modelUsage,
+    detailedModelUsage: result.detailedModelUsage || {},
     avgSessionSeconds: result.avgSessionSeconds || 0,
   };
 }

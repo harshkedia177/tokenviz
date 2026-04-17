@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { getTheme, isDark } from '../themes.js';
 import { formatTokens } from '../stats.js';
+import { computeCostSummary, formatCost } from '../pricing.js';
 import { MONTH_NAMES, DAY_LABELS, TOOL_COLORS, buildGrid, extractDisplayStats, computeGlobalTotals } from './shared.js';
 import type { ToolPanel, Theme, RenderOptions } from '../types.js';
 
@@ -153,6 +154,55 @@ export function renderTerminal(panels: ToolPanel[], opts: RenderOptions = {}): v
       lines.push(' ' + row2Values.map(v => statValue(v)).join(''));
     }
     lines.push('');
+
+    // Cost breakdown (when --cost flag is used)
+    if (opts.showCost) {
+      const costSummary = computeCostSummary(data.detailedModelUsage);
+
+      if (costSummary.modelCosts.length > 0) {
+        lines.push(lbl.dim(' ' + '\u2500'.repeat(Math.min(gridCharWidth, 100))));
+        lines.push('');
+        lines.push(txt.bold('  \uD83D\uDCB0 ESTIMATED COST'));
+        lines.push('');
+
+        const MODEL_COL = 30;
+        const COST_COL = 14;
+
+        lines.push(
+          '  ' +
+          lbl('MODEL'.padEnd(MODEL_COL)) +
+          lbl('INPUT'.padEnd(COST_COL)) +
+          lbl('OUTPUT'.padEnd(COST_COL)) +
+          lbl('CACHE READ'.padEnd(COST_COL)) +
+          lbl('CACHE WRITE'.padEnd(COST_COL)) +
+          lbl('TOTAL'),
+        );
+
+        for (const mc of costSummary.modelCosts) {
+          const modelName = mc.model.length > MODEL_COL - 2
+            ? mc.model.slice(0, MODEL_COL - 3) + '\u2026'
+            : mc.model;
+          lines.push(
+            '  ' +
+            txt(modelName.padEnd(MODEL_COL)) +
+            txt(formatCost(mc.inputCost).padEnd(COST_COL)) +
+            txt(formatCost(mc.outputCost).padEnd(COST_COL)) +
+            txt(formatCost(mc.cacheReadCost).padEnd(COST_COL)) +
+            txt(formatCost(mc.cacheWriteCost).padEnd(COST_COL)) +
+            txt.bold(formatCost(mc.totalCost)),
+          );
+        }
+
+        lines.push('');
+        lines.push('  ' + lbl('TOTAL'.padEnd(MODEL_COL)) +
+          ''.padEnd(COST_COL * 4) +
+          chalk.greenBright.bold(formatCost(costSummary.totalCost)));
+        lines.push('');
+
+        lines.push(lbl.dim('  * Estimates based on public API pricing. Actual costs may vary.'));
+        lines.push('');
+      }
+    }
 
     if (p < panels.length - 1) {
       lines.push('');

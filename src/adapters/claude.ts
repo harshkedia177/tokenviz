@@ -4,6 +4,7 @@ import { join } from 'path';
 import { claudePaths } from '../lib/paths.js';
 import { poolMap } from '../lib/concurrency.js';
 import type { DayData, AdapterResult } from '../types.js';
+import type { ModelTokenDetail } from '../pricing.js';
 
 const FILE_CONCURRENCY = parseInt(process.env.BRAGGRID_CONCURRENCY ?? '', 10) || 32;
 
@@ -40,6 +41,7 @@ interface DayAccum {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  cacheWriteTokens: number;
   models: Record<string, number>;
   hours: Record<number, number>;
   sessions: Set<string>;
@@ -68,6 +70,7 @@ interface ParsedRecord {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
+  cacheWriteTokens: number;
   model: string;
   hour: number;
   sessionId?: string;
@@ -104,14 +107,15 @@ function parseLines(content: string, yearPrefix: string | null): Map<string, Par
       const date = timestamp.slice(0, 10);
       if (yearPrefix && !date.startsWith(yearPrefix)) continue;
 
-      const inputTokens = (usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0);
+      const inputTokens = usage.input_tokens || 0;
+      const cacheWriteTokens = usage.cache_creation_input_tokens || 0;
       const outputTokens = usage.output_tokens || 0;
       const cacheReadTokens = usage.cache_read_input_tokens || 0;
 
-      if (inputTokens + outputTokens + cacheReadTokens === 0) continue;
+      if (inputTokens + cacheWriteTokens + outputTokens + cacheReadTokens === 0) continue;
 
       const parsed: ParsedRecord = {
-        date, inputTokens, outputTokens, cacheReadTokens, model,
+        date, inputTokens: inputTokens + cacheWriteTokens, outputTokens, cacheReadTokens, cacheWriteTokens, model,
         hour: extractHour(timestamp),
         sessionId: record.sessionId,
       };
@@ -145,12 +149,13 @@ function accumulateRecords(records: Map<string, ParsedRecord>, dayMap: Map<strin
 
     let entry = dayMap.get(rec.date);
     if (!entry) {
-      entry = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, models: {}, hours: {}, sessions: new Set(), messages: 0 };
+      entry = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, models: {}, hours: {}, sessions: new Set(), messages: 0 };
       dayMap.set(rec.date, entry);
     }
     entry.inputTokens += rec.inputTokens;
     entry.outputTokens += rec.outputTokens;
     entry.cacheReadTokens += rec.cacheReadTokens;
+    entry.cacheWriteTokens += rec.cacheWriteTokens;
 
     const modelTotal = rec.inputTokens + rec.cacheReadTokens + rec.outputTokens;
     entry.models[rec.model] = (entry.models[rec.model] || 0) + modelTotal;
@@ -200,6 +205,7 @@ async function loadFromJsonl(dirs: string[], yearFilter: number | null): Promise
   const days: DayData[] = [];
   const hourCounts: Record<string, number> = {};
   const modelUsage: Record<string, number> = {};
+  const detailedModelUsage: Record<string, ModelTokenDetail> = {};
   let totalSessions = 0;
   let totalMessages = 0;
   let firstDate: string | null = null;
@@ -228,6 +234,23 @@ async function loadFromJsonl(dirs: string[], yearFilter: number | null): Promise
     }
   }
 
+  // Build detailedModelUsage by proportional distribution of day-level in/out/cache
+  // across models based on their share of total tokens per day
+  for (const [, entry] of dayMap) {
+    const dayTotal = entry.inputTokens + entry.outputTokens + entry.cacheReadTokens;
+    if (dayTotal === 0) continue;
+    for (const [model, modelTotal] of Object.entries(entry.models)) {
+      const ratio = modelTotal / dayTotal;
+      if (!detailedModelUsage[model]) {
+        detailedModelUsage[model] = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+      }
+      detailedModelUsage[model].inputTokens += Math.round((entry.inputTokens - entry.cacheWriteTokens) * ratio);
+      detailedModelUsage[model].outputTokens += Math.round(entry.outputTokens * ratio);
+      detailedModelUsage[model].cacheReadTokens += Math.round(entry.cacheReadTokens * ratio);
+      detailedModelUsage[model].cacheWriteTokens += Math.round(entry.cacheWriteTokens * ratio);
+    }
+  }
+
   return {
     tool: 'claude',
     days,
@@ -236,6 +259,7 @@ async function loadFromJsonl(dirs: string[], yearFilter: number | null): Promise
     totalMessages,
     firstSessionDate: firstDate,
     modelUsage,
+    detailedModelUsage,
     avgSessionSeconds: 0,
   };
 }
@@ -249,6 +273,7 @@ function loadFromCache(dirs: string[], yearFilter: number | null): AdapterResult
 
   const days: DayData[] = [];
   const modelUsage: Record<string, number> = {};
+  const detailedModelUsage: Record<string, ModelTokenDetail> = {};
   let firstDate: string | null = null;
 
   for (const [date, models] of Object.entries(costDays)) {
@@ -277,6 +302,17 @@ function loadFromCache(dirs: string[], yearFilter: number | null): AdapterResult
     for (const [model, tokens] of Object.entries(dayModels)) {
       modelUsage[model] = (modelUsage[model] || 0) + tokens;
     }
+
+    // Track detailed per-model token breakdown from cost cache
+    for (const [modelId, usage] of Object.entries(models)) {
+      if (!detailedModelUsage[modelId]) {
+        detailedModelUsage[modelId] = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+      }
+      detailedModelUsage[modelId].inputTokens += usage.input || 0;
+      detailedModelUsage[modelId].outputTokens += usage.output || 0;
+      detailedModelUsage[modelId].cacheReadTokens += usage.cacheRead || 0;
+      detailedModelUsage[modelId].cacheWriteTokens += usage.cacheWrite || 0;
+    }
   }
 
   if (days.length === 0) return null;
@@ -289,6 +325,7 @@ function loadFromCache(dirs: string[], yearFilter: number | null): AdapterResult
     totalMessages: 0,
     firstSessionDate: firstDate,
     modelUsage,
+    detailedModelUsage,
     avgSessionSeconds: 0,
   };
 }
@@ -302,6 +339,7 @@ function loadFromStatsCache(dirs: string[], yearFilter: number | null): AdapterR
 
   const days: DayData[] = [];
   const modelUsage: Record<string, number> = {};
+  const detailedModelUsage: Record<string, ModelTokenDetail> = {};
   let firstDate: string | null = null;
 
   for (const [date, entry] of Object.entries(statsCache)) {
@@ -322,6 +360,15 @@ function loadFromStatsCache(dirs: string[], yearFilter: number | null): AdapterR
       cacheReadTokens += cacheRead;
       const modelTotal = input + cacheRead + output;
       dayModels[modelId] = (dayModels[modelId] || 0) + modelTotal;
+
+      // Track detailed per-model token breakdown
+      if (!detailedModelUsage[modelId]) {
+        detailedModelUsage[modelId] = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+      }
+      detailedModelUsage[modelId].inputTokens += usage.inputTokens || 0;
+      detailedModelUsage[modelId].outputTokens += output;
+      detailedModelUsage[modelId].cacheReadTokens += cacheRead;
+      detailedModelUsage[modelId].cacheWriteTokens += usage.cacheCreationTokens || 0;
     }
 
     if (inputTokens + outputTokens + cacheReadTokens === 0) continue;
@@ -344,8 +391,36 @@ function loadFromStatsCache(dirs: string[], yearFilter: number | null): AdapterR
     totalMessages: 0,
     firstSessionDate: firstDate,
     modelUsage,
+    detailedModelUsage,
     avgSessionSeconds: 0,
   };
+}
+
+/**
+ * Enrich detailedModelUsage from stats-cache.json's top-level modelUsage,
+ * which has authoritative per-model token breakdowns including cacheCreationInputTokens.
+ */
+function enrichFromStatsCache(result: AdapterResult, dirs: string[]): void {
+  const raw = loadJson(dirs, 'stats-cache.json');
+  if (!raw) return;
+
+  const modelUsage = raw.modelUsage as Record<string, Record<string, number>> | undefined;
+  if (!modelUsage) return;
+
+  // Only replace if we have authoritative data
+  const enriched: Record<string, ModelTokenDetail> = {};
+  for (const [model, usage] of Object.entries(modelUsage)) {
+    enriched[model] = {
+      inputTokens: usage.inputTokens || 0,
+      outputTokens: usage.outputTokens || 0,
+      cacheReadTokens: usage.cacheReadInputTokens || 0,
+      cacheWriteTokens: usage.cacheCreationInputTokens || 0,
+    };
+  }
+
+  if (Object.keys(enriched).length > 0) {
+    result.detailedModelUsage = enriched;
+  }
 }
 
 export async function load(yearFilter: number | null): Promise<AdapterResult | null> {
@@ -353,7 +428,11 @@ export async function load(yearFilter: number | null): Promise<AdapterResult | n
   if (!dirs.length) return null;
 
   const jsonlResult = await loadFromJsonl(dirs, yearFilter);
-  if (jsonlResult) return jsonlResult;
+  if (jsonlResult) {
+    // Enrich with stats-cache.json for accurate per-model token breakdowns
+    enrichFromStatsCache(jsonlResult, dirs);
+    return jsonlResult;
+  }
 
   // Try stats-cache.json (more detailed than readout-cost-cache)
   const statsCacheResult = loadFromStatsCache(dirs, yearFilter);

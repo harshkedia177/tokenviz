@@ -1,3 +1,6 @@
+import type { ModelTokenDetail } from './pricing.js';
+export type { ModelTokenDetail };
+
 export interface DayData {
   date: string;
   inputTokens: number;
@@ -17,6 +20,7 @@ export interface AdapterResult {
   totalMessages: number;
   firstSessionDate: string | null;
   modelUsage: Record<string, number>;
+  detailedModelUsage?: Record<string, ModelTokenDetail>;
   avgSessionSeconds: number;
 }
 
@@ -33,6 +37,7 @@ export interface AggregatedData {
   totalMessages: number;
   firstSessionDate: string | null;
   modelUsage: Record<string, number>;
+  detailedModelUsage: Record<string, ModelTokenDetail>;
   avgSessionSeconds: number;
 }
 
@@ -104,4 +109,5 @@ export interface RenderOptions {
   theme?: string;
   user?: string;
   year?: number;
+  showCost?: boolean;
 }
