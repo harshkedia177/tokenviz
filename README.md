@@ -38,12 +38,12 @@ That's it. It reads your local data, renders a heatmap in your terminal, and exp
 
 ## Supported Tools
 
-| Tool | Data Source | What's Tracked |
-|------|-----------|----------------|
-| **Claude Code** | `~/.claude/stats-cache.json` | Tokens, models, sessions, costs |
-| **Codex CLI** | `~/.codex/sessions/*.jsonl` | Tokens, models, session durations |
-| **OpenCode** | `~/.local/share/opencode/` | Tokens, models, messages |
-| **Cursor** | Cursor API + local `state.vscdb` | Tokens, models, usage events |
+| Tool            | Data Source                      | What's Tracked                    |
+| --------------- | -------------------------------- | --------------------------------- |
+| **Claude Code** | `~/.claude/stats-cache.json`     | Tokens, models, sessions, costs   |
+| **Codex CLI**   | `~/.codex/sessions/*.jsonl`      | Tokens, models, session durations |
+| **OpenCode**    | `~/.local/share/opencode/`       | Tokens, models, messages          |
+| **Cursor**      | Cursor API + local `state.vscdb` | Tokens, models, usage events      |
 
 tokenviz auto-detects which tools you have installed. No configuration needed.
 
@@ -78,6 +78,22 @@ A full-color contribution grid right in your terminal, with:
 - Peak coding hour & busiest day
 - Average session length
 - Per-tool usage panels
+
+### Cost Analysis
+
+See exactly how much your AI usage costs with `--cost`:
+
+```
+  💰 ESTIMATED COST
+
+  MODEL                         INPUT         OUTPUT        CACHE READ    CACHE WRITE   TOTAL
+  claude-opus-4-6               $0.37         $5.65         $33.9         $59.7         $99.5
+  claude-sonnet-4-6             $0.03         $1.58         $4.06         $5.48         $11.2
+
+  TOTAL                                                                                 $116
+```
+
+Breaks down cost per model with input, output, cache read, and cache write columns. Pricing is based on official published API rates.
 
 ### Shareable PNG/SVG
 
@@ -125,6 +141,11 @@ tokenviz --copy
 # Dump raw stats as JSON (for scripting)
 tokenviz --json
 
+# Show estimated cost breakdown by model
+tokenviz --cost
+tokenviz --claude --cost
+tokenviz --cost --no-export
+
 # See all themes
 tokenviz --list-themes
 ```
@@ -133,13 +154,13 @@ tokenviz --list-themes
 
 10 built-in themes — 5 light, 5 dark:
 
-| Dark | Light |
-|------|-------|
-| `dark-ember` | `green` (default) |
-| `dark-green` | `purple` |
-| `dark-purple` | `blue` |
-| `dark-blue` | `amber` |
-| `dark-mono` | `mono` |
+| Dark          | Light             |
+| ------------- | ----------------- |
+| `dark-ember`  | `green` (default) |
+| `dark-green`  | `purple`          |
+| `dark-purple` | `blue`            |
+| `dark-blue`   | `amber`           |
+| `dark-mono`   | `mono`            |
 
 ```bash
 tokenviz --theme dark-purple
@@ -148,21 +169,22 @@ tokenviz --theme amber
 
 ## Options
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--user <name>` | Username shown on the heatmap | — |
-| `--claude` | Include only Claude Code data | — |
-| `--codex` | Include only Codex data | — |
-| `--opencode` | Include only OpenCode data | — |
-| `--cursor` | Include only Cursor data | — |
-| `--theme <name>` | Color theme | `green` |
-| `--export <fmt>` | Export format: `png` or `svg` | `png` |
-| `--no-export` | Skip file export, terminal only | — |
-| `--out <path>` | Custom output file path | `tokenviz.png` |
-| `--copy` | Copy PNG to clipboard after export | — |
-| `--year <year>` | Filter to a specific year | last 365 days |
-| `--json` | Output raw stats as JSON | — |
-| `--list-themes` | Show all available themes | — |
+| Flag             | Description                            | Default        |
+| ---------------- | -------------------------------------- | -------------- |
+| `--user <name>`  | Username shown on the heatmap          | —              |
+| `--claude`       | Include only Claude Code data          | —              |
+| `--codex`        | Include only Codex data                | —              |
+| `--opencode`     | Include only OpenCode data             | —              |
+| `--cursor`       | Include only Cursor data               | —              |
+| `--theme <name>` | Color theme                            | `green`        |
+| `--export <fmt>` | Export format: `png` or `svg`          | `png`          |
+| `--no-export`    | Skip file export, terminal only        | —              |
+| `--out <path>`   | Custom output file path                | `tokenviz.png` |
+| `--copy`         | Copy PNG to clipboard after export     | —              |
+| `--year <year>`  | Filter to a specific year              | last 365 days  |
+| `--json`         | Output raw stats as JSON               | —              |
+| `--cost`         | Show estimated cost breakdown by model | —              |
+| `--list-themes`  | Show all available themes              | —              |
 
 ## How It Works
 
@@ -183,6 +205,7 @@ tokenviz reads **locally stored data** from your AI coding tools. It never sends
 
 **Q: I don't see any data?**
 Make sure you've actually used one of the supported tools. tokenviz reads from the default data locations — if you've customized paths, set the environment variable:
+
 - `CLAUDE_CONFIG_DIR` for Claude Code
 - `CODEX_HOME` for Codex CLI
 - `OPENCODE_DATA_DIR` for OpenCode
