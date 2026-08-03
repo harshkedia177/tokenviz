@@ -209,3 +209,10 @@ node dist/bin.js --list-themes
 ## License
 
 MIT
+
+<!-- portfolio-link -->
+---
+
+**[Read the case study →](https://harshkedia.com/work/tokenviz/)** — the design decisions, the trade-offs, and what broke along the way.
+
+Built by [Harsh Kedia](https://harshkedia.com).

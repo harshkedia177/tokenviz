@@ -42,11 +42,14 @@
     "type": "git",
     "url": "https://github.com/harshkedia177/tokenviz"
   },
-  "homepage": "https://github.com/harshkedia177/tokenviz#readme",
+  "homepage": "https://harshkedia.com/work/tokenviz/",
   "bugs": {
     "url": "https://github.com/harshkedia177/tokenviz/issues"
   },
-  "author": "Harsh Kedia",
+  "author": {
+    "name": "Harsh Kedia",
+    "url": "https://harshkedia.com"
+  },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "chalk": "^5.4.0",
